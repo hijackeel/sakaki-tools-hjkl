@@ -1,16 +1,16 @@
 <?xml version="1.0" ?>
 <repositories version="1.0">
     <repo priority="100" quality="experimental" status="unofficial">
-        <name>sakaki-tools</name>
-        <description lang="en">Utility ebuilds for Sakaki's EFI Install Guide</description>
-        <homepage>https://github.com/sakaki-/sakaki-tools</homepage>
+        <name>sakaki-tools-hjkl</name>
+        <description lang="en">buildkernel-hjkl ebuild for Sakaki's EFI Install Guide</description>
+        <homepage>https://github.com/hijackeel/sakaki-tools-hjkl</homepage>
         <owner>
-            <name>sakaki</name>
-            <email>sakaki@deciban.com</email>
+            <name>hijackeel</name>
+            <email>hijackeel@posteo.net</email>
         </owner>
-        <source type="git">https://github.com/sakaki-/sakaki-tools.git</source>
-        <source type="git">git://github.com/sakaki-/sakaki-tools.git</source>
-        <source type="git">git@github.com:sakaki-/sakaki-tools.git</source>
-        <feed>https://github.com/sakaki-/sakaki-tools/commits/master.atom</feed>
+        <source type="git">https://github.com/hijackeel/sakaki-tools-hjkl.git</source>
+        <source type="git">git://github.com/hijackeel/sakaki-tools-hjkl.git</source>
+        <source type="git">git@github.com:hijackeel/sakaki-tools-hjkl.git</source>
+        <feed>https://github.com/hijackeel/sakaki-tools-hjkl/commits/master.atom</feed>
     </repo>
 </repositories>

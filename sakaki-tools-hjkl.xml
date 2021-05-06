@@ -1,0 +1,11 @@
+<repositories encoding="unicode" version="1.1">
+  <repo priority="50" quality="experimental">
+    <name>sakaki-tools-hjkl</name>
+    <description>buildkernel-hjkl ebuild for Sakaki's EFI Install Guide</description>
+    <owner>
+      <email>hijackeel@posteo.net</email>
+      <name>hijackeel</name>
+    </owner>
+    <source type="git">https://github.com/hijackeel/sakaki-tools-hjkl.git</source>
+  </repo>
+</repositories>
