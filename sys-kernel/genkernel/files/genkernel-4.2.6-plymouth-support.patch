@@ -1,45 +1,27 @@
---- b/defaults/initrd.scripts
-+++ a/defaults/initrd.scripts
-@@ -75,7 +75,6 @@ modules_scan() {
- 	elif [ "${USE_MDADM}" = '1' ] \
- 		|| [ "${USE_LVM_NORMAL}" = '1' ] \
- 		|| [ "${USE_CRYPTSETUP}" = '1' ] \
--		|| [ "${USE_BTRFS}" = '1' ] \
- 		|| [ "${USE_ZFS}" = '1' ] \
- 		|| [ "${USE_DMRAID_NORMAL}" = '1' ]
- 	then
-@@ -561,8 +560,7 @@ conf_rc_no_umounts() {
- 	if nomount=$(grep -n '^[[:blank:]]*no_umounts=' ${conf})
- 	then
- 		local i n data cmd IFS
--		IFS='
--'
-+		IFS=''
- 		set -- ${nomount}
- 		unset IFS
- 
-@@ -1010,6 +1008,8 @@ run_emergency_shell() {
+--- a/defaults/initrd.scripts
++++ b/defaults/initrd.scripts
+@@ -1023,6 +1023,8 @@ run_emergency_shell() {
  }
  
  run_shell() {
 +	splashCmd 'verbose' >/dev/null &
 +
- 	if [ -f "${GK_USERINTERACTION_DISABLED_STATEFILE}" ]
+ 	if ! is_userinteraction_allowed
  	then
  		bad_msg "gk.userinteraction.disabled is set; Spawning a shell is disabled!"
-@@ -1161,7 +1161,7 @@ bad_msg() {
+@@ -1181,7 +1183,7 @@ bad_msg() {
  
- 	if [ "$2" != '1' ]
- 	then
--		splash 'verbose' >/dev/null &
-+		splashCmd 'verbose' >/dev/null &
- 		printf "%b\n" "${BAD}!!${NORMAL}${BOLD} ${msg_string} ${NORMAL}"
- 	fi
+ 	log_msg "[!!] ${msg_string}"
+ 
+-	splash 'verbose' >/dev/null &
++	splashCmd 'verbose' >/dev/null &
+ 	printf "%b\n" "${BAD}!!${NORMAL}${BOLD} ${msg_string} ${NORMAL}"
  }
-@@ -1202,13 +1202,19 @@ crypt_filter() {
+ 
+@@ -1221,13 +1223,19 @@ crypt_filter() {
  	if [ "${CRYPT_SILENT}" = '1' ]
  	then
- 		eval run ${1} >/dev/null 2>&1
+ 		eval run ${1}
 +	elif [ "${PLYMOUTH}" = '1' ] && plymouth_running
 +	then
 +		run plymouth ask-for-password --prompt "Enter LUKS passphrase" \
@@ -58,7 +40,7 @@
  		fi
  		return ${res}
  	fi
-@@ -1279,6 +1285,7 @@ prompt_user() {
+@@ -1298,6 +1306,7 @@ prompt_user() {
  	fi
  	[ -n "${3}" ] && local explnt=" or : ${3}" || local explnt="."
  
@@ -66,7 +48,7 @@
  	bad_msg "Could not find the ${2} in ${oldvalue}${explnt}"
  
  	if [ -f "${GK_USERINTERACTION_DISABLED_STATEFILE}" ]
-@@ -1361,6 +1368,8 @@ prompt_user() {
+@@ -1380,6 +1389,8 @@ prompt_user() {
  			eval ${1}'='${oldvalue}
  			;;
  	esac
@@ -75,7 +57,7 @@
  }
  
  cmdline_hwopts() {
-@@ -1433,7 +1442,7 @@ chooseKeymap() {
+@@ -1459,7 +1470,7 @@ chooseKeymap() {
  	good_msg "Loading keymaps"
  	if [ -z "${keymap}" ]
  	then
@@ -84,7 +66,7 @@
  		run cat /lib/keymaps/keymapList
  		read -t 10 -p '<< Load keymap (Enter for default): ' keymap
  		case ${keymap} in
-@@ -1491,12 +1500,12 @@ chooseKeymap() {
+@@ -1517,12 +1528,12 @@ chooseKeymap() {
  
  		run mkdir -p /etc/sysconfig
  		echo "XKEYBOARD=${keymap}" > /etc/sysconfig/keyboard
@@ -99,7 +81,7 @@
  	else
  		bad_msg "Sorry, but keymap '${keymap}' is invalid!"
  		unset keymap
-@@ -1519,6 +1528,71 @@ splash() {
+@@ -1545,6 +1556,71 @@ splash() {
  	return 0
  }
  
@@ -171,41 +153,15 @@
  start_volumes() {
  	# Here, we check for /dev/device-mapper, and if it exists, we setup a
  	# a symlink, which should hopefully fix bug #142775 and bug #147015
-@@ -1612,25 +1686,6 @@ start_volumes() {
- 		fi
- 	fi
- 
--	if [ "${USE_BTRFS}" = '1' ]
--	then
--		if ! hash btrfs >/dev/null 2>&1
--		then
--			bad_msg "dobtrfs invoked but 'btrfs' not found; Skipping btrfs device scanning ..."
--		else
--			good_msg "Scanning for BTRFS devices ..."
--
--			local btrfs_cmd="run btrfs device scan 2>&1"
--			is_log_enabled && btrfs_cmd="${btrfs_cmd} | tee -a '${GK_INIT_LOG}'"
--
--			eval "${btrfs_cmd}"
--			if [ $? -ne 0 ]
--			then
--				bad_msg "Scanning for BTRFS devices failed!"
--			fi
--		fi
--	fi
--
- 	if [ "${USE_ZFS}" = '1' ]
- 	then
- 		# Avoid race involving asynchronous module loading
-@@ -1804,6 +1859,7 @@ openLUKS() {
- 		local cryptsetup_options=''
+@@ -1830,6 +1906,7 @@ openLUKS() {
+ 		cryptsetup_options="$(trim "${cryptsetup_options}")"
  
  		local gpg_cmd=""
 +		local ply_cmd=""
  		if [ -e "${OPENED_LOCKFILE}" ]
  		then
  			good_msg "The LUKS device ${LUKS_DEVICE} meanwhile was opened by someone else."
-@@ -1925,15 +1981,27 @@ openLUKS() {
+@@ -1950,15 +2027,27 @@ openLUKS() {
  							[ -e /dev/tty ] && run mv /dev/tty /dev/tty.org
  							run mknod /dev/tty c 5 1
  							cryptsetup_options="${cryptsetup_options} -d -"
@@ -235,40 +191,11 @@
  
  				[ -e /dev/tty.org ] \
  					&& run rm -f /dev/tty \
-@@ -2510,18 +2578,6 @@ cdupdate() {
- 	fi
- }
- 
--setup_btrfsctl() {
--	# start BTRFS volume detection, if available
--	if hash btrfsctl >/dev/null 2>&1
--	then
--		local btrfs_cmd="run btrfsctl -a 2>&1"
--		is_log_enabled && btrfs_cmd="${btrfs_cmd} | tee -a '${GK_INIT_LOG}'"
--
--		eval "${btrfs_cmd}"
--		udevsettle
--	fi
--}
--
- rundebugshell() {
- 	if is_debug
- 	then
---- b/defaults/linuxrc
-+++ a/defaults/linuxrc
-@@ -151,9 +151,6 @@ do
- 				;;
- 			esac
- 		;;
--		dobtrfs)
--			USE_BTRFS=1
--		;;
- 		quiet|quiet_genkernel)
- 			QUIET=1
- 		;;
-@@ -191,6 +188,18 @@ do
- 			NEW_CONSOLE=$(basename ${NEW_CONSOLE})
- 			NEW_CONSOLE=${NEW_CONSOLE%%,*}
+--- a/defaults/linuxrc
++++ b/defaults/linuxrc
+@@ -163,6 +163,18 @@ do
+ 			MLIST=$(echo ${MLIST} ${x#*=} | sed -e 's/^\ *//;s/,/ /g')
+ 			export MLIST
  		;;
 +		splash)
 +			if [ -x /usr/bin/plymouth -a -x /usr/sbin/plymouthd ]
@@ -284,9 +211,9 @@
 +		;;
  		# /dev/md
  		lvmraid=*)
- 			RAID_DEVICES="${x#*=}"
-@@ -518,8 +527,6 @@ then
- 	FIRSTMODS="${FIRSTMODS} crc32_generic"
+ 			warn_msg "'${x}' kernel command-line argument is deprecated; Use 'dolvm' instead!"
+@@ -530,8 +542,6 @@ then
+ 	FIRSTMODS="${FIRSTMODS} btrfs"
  fi
  
 -splash 'init'
@@ -294,7 +221,7 @@
  cmdline_hwopts
  
  # Mount devfs
-@@ -597,6 +604,9 @@ fi
+@@ -609,6 +619,9 @@ fi
  
  cd /
  
@@ -304,17 +231,7 @@
  # Start iSCSI
  if hash iscsistart >/dev/null 2>&1
  then
-@@ -615,9 +625,6 @@ fi
- # Apply scan delay if specified
- sdelay
- 
--# Setup btrfs, see bug 303529
--setup_btrfsctl
--
- # Scan volumes
- start_volumes
- 
-@@ -1276,6 +1283,8 @@ fi # if [ "${CDROOT}" = '1' ]
+@@ -1287,6 +1300,8 @@ fi # if [ "${CDROOT}" = '1' ]
  # Re-run to ensure $NEWROOT/etc/initramfs.mounts was processed at least once
  process_initramfs_mounts
  
@@ -323,18 +240,9 @@
  # Execute script on the cdrom just before boot to update things if necessary
  cdupdate
  
-@@ -1348,7 +1357,7 @@ else
- fi
- 
- # If we get here, something bad has happened
--splash 'verbose'
-+splashCmd 'verbose'
- 
- bad_msg "A fatal error has occured since ${init} did not"
- bad_msg "boot correctly. Trying to open a shell ..."
---- b/doc/genkernel.8.txt
-+++ a/doc/genkernel.8.txt
-@@ -317,6 +317,13 @@ INITIALIZATION
+--- a/doc/genkernel.8.txt
++++ b/doc/genkernel.8.txt
+@@ -359,6 +359,13 @@ INITIALIZATION
      <theme>  rather than the default theme specified in your splash
      configuration. If *--no-splash* is specified, then splash is disabled.
  
@@ -348,18 +256,8 @@
  *--do-keymap-auto*::
      Force keymap selection at boot.
  
-@@ -775,9 +782,6 @@ when not set. This will allow remote user to provide answer through
-     Scan for bootable ZFS pools on bootup. Optionally use cachefile or force import if
-     necessary or perform both actions.
- 
--*dobtrfs*::
--    Scan for attached Btrfs devices on bootup.
--
- *domultipath*::
-     Activate Multipath on bootup.
- 
---- b/gen_cmdline.sh
-+++ a/gen_cmdline.sh
+--- a/gen_cmdline.sh
++++ b/gen_cmdline.sh
 @@ -53,6 +53,8 @@ longusage() {
    echo "	--no-mrproper		Do not run 'make mrproper' before compilation"
    echo "	--splash		Install framebuffer splash support into initramfs"
@@ -369,7 +267,7 @@
    echo "	--install		Install the kernel after building"
    echo "	--no-install		Do not install the kernel after building"
    echo "	--symlink		Manage symlinks in /boot for installed images"
-@@ -113,6 +115,7 @@ longusage() {
+@@ -127,6 +129,7 @@ longusage() {
    echo "	--splash-res=<res>	Select splash theme resolutions to install"
    echo "	--splash=<theme>	Enable framebuffer splash using <theme>"
    echo "	--splash-res=<res>	Select splash theme resolutions to install"
@@ -377,7 +275,7 @@
    echo "	--do-keymap-auto	Forces keymap selection at boot"
    echo "	--keymap		Enables keymap selection support"
    echo "	--no-keymap		Disables keymap selection support"
-@@ -600,6 +603,17 @@ parse_cmdline() {
+@@ -670,6 +673,17 @@ parse_cmdline() {
  			SPLASH_RES="${*#*=}"
  			print_info 3 "SPLASH_RES: ${SPLASH_RES}"
  			;;
@@ -395,9 +293,9 @@
  		--install|--no-install)
  			CMD_INSTALL=$(parse_optbool "$*")
  			print_info 3 "CMD_INSTALL: ${CMD_INSTALL}"
---- b/gen_determineargs.sh
-+++ a/gen_determineargs.sh
-@@ -352,6 +352,7 @@ determine_real_args() {
+--- a/gen_determineargs.sh
++++ b/gen_determineargs.sh
+@@ -387,6 +387,7 @@ determine_real_args() {
  	set_config_with_override STRING MODPROBEDIR                           CMD_MODPROBEDIR                           "/etc/modprobe.d"
  
  	set_config_with_override BOOL   SPLASH                                CMD_SPLASH                                "no"
@@ -405,7 +303,7 @@
  	set_config_with_override BOOL   CLEAR_CACHEDIR                        CMD_CLEAR_CACHEDIR                        "no"
  	set_config_with_override BOOL   POSTCLEAR                             CMD_POSTCLEAR                             "no"
  	set_config_with_override BOOL   MRPROPER                              CMD_MRPROPER                              "yes"
-@@ -984,6 +985,11 @@ determine_real_args() {
+@@ -1019,6 +1020,11 @@ determine_real_args() {
  			fi
  		fi
  
@@ -417,8 +315,8 @@
  		if isTrue "${SSH}"
  		then
  			local ssh_authorized_keys_file=$(expand_file "${SSH_AUTHORIZED_KEYS_FILE}")
---- b/gen_initramfs.sh
-+++ a/gen_initramfs.sh
+--- a/gen_initramfs.sh
++++ b/gen_initramfs.sh
 @@ -483,6 +483,7 @@ append_base_layout() {
  	isTrue "${UNIONFS}" && build_parameters+=( --unionfs ) || build_parameters+=( --no-unionfs )
  	isTrue "${ZFS}" && build_parameters+=( --zfs ) || build_parameters+=( --no-zfs )
@@ -427,7 +325,7 @@
  	isTrue "${STRACE}" && build_parameters+=( --strace ) || build_parameters+=( --no-strace )
  	isTrue "${GPG}" && build_parameters+=( --gpg ) || build_parameters+=( --no-gpg )
  	isTrue "${LUKS}" && build_parameters+=( --luks ) || build_parameters+=( --no-luks )
-@@ -1283,6 +1284,136 @@ append_splash() {
+@@ -1302,6 +1303,137 @@ append_splash() {
  	fi
  }
  
@@ -470,6 +368,7 @@
 +
 +	# this might be better located in append_drm (?)
 +	mkdir -p "${TDIR}"/usr/lib/udev/rules.d || gen_die "Failed to create '${TDIR}/usr/lib/udev/rules.d'!"
++	cp -aL /lib/udev/rules.d/70-uaccess.rules "${TDIR}/usr/lib/udev/rules.d" || gen_die "Failed to copy '70-uaccess.rules'!"
 +	cp -aL /lib/udev/rules.d/71-seat.rules "${TDIR}/usr/lib/udev/rules.d" || gen_die "Failed to copy '71-seat.rules'!"
 +
 +	# clean up
@@ -564,7 +463,7 @@
  append_strace() {
  	local PN=strace
  	local TDIR="${TEMP}/initramfs-${PN}-temp"
-@@ -2003,11 +2134,17 @@ create_initramfs() {
+@@ -2054,11 +2186,17 @@ create_initramfs() {
  	append_data 'modprobed'
  	append_data 'multipath' "${MULTIPATH}"
  	append_data 'splash' "${SPLASH}"
@@ -582,18 +481,8 @@
  	if isTrue "${ZFS}"
  	then
  		append_data 'libgcc_s'
---- b/genkernel
-+++ a/genkernel
-@@ -485,7 +485,6 @@ then
- 	print_warning 1 "${BOLD}WARNING... WARNING... WARNING...${NORMAL}"
- 	print_warning 1 'Additional kernel parameters that *may* be required to boot properly:'
- 	isTrue "${SPLASH}"    && print_warning 1 "- Add \"vga=791 splash=silent,theme:${SPLASH_THEME} console=tty1 quiet\" if you use a splash framebuffer ]"
--	isTrue "${BTRFS}"     && print_warning 1 '- Add "dobtrfs" for Btrfs device scanning support'
- 	isTrue "${MULTIPATH}" && print_warning 1 '- Add "domultipath" for multipath support'
- 	isTrue "${ISCSI}"     && print_warning 1 '- For iSCSI support, add at least:'
- 	isTrue "${ISCSI}"     && print_warning 1 '	- "iscsi_initiatorname=<initiator name>"'
---- b/genkernel.conf
-+++ a/genkernel.conf
+--- a/genkernel.conf
++++ b/genkernel.conf
 @@ -171,6 +171,13 @@ NOCOLOR="false"
  # This supersedes the "SPLASH_THEME" option in '/etc/conf.d/splash'.
  #SPLASH_THEME="gentoo"
