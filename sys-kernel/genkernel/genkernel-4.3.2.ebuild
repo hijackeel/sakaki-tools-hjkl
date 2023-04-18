@@ -1,4 +1,4 @@
-# Copyright 1999-2021 Gentoo Authors
+# Copyright 1999-2023 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 # genkernel-9999        -> latest Git branch "master"
@@ -6,14 +6,14 @@
 
 EAPI="7"
 
-PYTHON_COMPAT=( python3_{7..10} )
+PYTHON_COMPAT=( python3_{9..11} )
 
 inherit bash-completion-r1 python-single-r1
 
 # Whenever you bump a GKPKG, check if you have to move
 # or add new patches!
 VERSION_BCACHE_TOOLS="1.0.8_p20141204"
-VERSION_BOOST="1.76.0"
+VERSION_BOOST="1.79.0"
 VERSION_BTRFS_PROGS="5.15"
 VERSION_BUSYBOX="1.34.1"
 VERSION_COREUTILS="8.32"
@@ -45,6 +45,7 @@ VERSION_XFSPROGS="5.13.0"
 VERSION_XZ="5.2.5"
 VERSION_ZLIB="1.2.11"
 VERSION_ZSTD="1.5.0"
+VERSION_KEYUTILS="1.6.3"
 
 COMMON_URI="
 	https://github.com/g2p/bcache-tools/archive/399021549984ad27bf4a13ae85e458833fe003d7.tar.gz -> bcache-tools-${VERSION_BCACHE_TOOLS}.tar.gz
@@ -78,8 +79,9 @@ COMMON_URI="
 	https://www.kernel.org/pub/linux/utils/util-linux/v${VERSION_UTIL_LINUX:0:4}/util-linux-${VERSION_UTIL_LINUX}.tar.xz
 	https://www.kernel.org/pub/linux/utils/fs/xfs/xfsprogs/xfsprogs-${VERSION_XFSPROGS}.tar.xz
 	https://tukaani.org/xz/xz-${VERSION_XZ}.tar.gz
-	https://zlib.net/zlib-${VERSION_ZLIB}.tar.gz
+	https://zlib.net/fossils/zlib-${VERSION_ZLIB}.tar.gz
 	https://github.com/facebook/zstd/archive/v${VERSION_ZSTD}.tar.gz -> zstd-${VERSION_ZSTD}.tar.gz
+	https://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils.git/snapshot/keyutils-${VERSION_KEYUTILS}.tar.gz
 "
 
 if [[ ${PV} == 9999* ]] ; then
@@ -88,7 +90,7 @@ if [[ ${PV} == 9999* ]] ; then
 	S="${WORKDIR}/${P}"
 	SRC_URI="${COMMON_URI}"
 else
-	SRC_URI="https://dev.gentoo.org/~whissi/dist/genkernel/${P}.tar.xz
+	SRC_URI="https://dev.gentoo.org/~mattst88/distfiles/${P}.tar.xz
 		${COMMON_URI}"
 	KEYWORDS="~alpha amd64 arm arm64 hppa ~ia64 ~mips ppc ppc64 ~riscv ~s390 sparc x86"
 fi
@@ -112,11 +114,15 @@ RDEPEND="${PYTHON_DEPS}
 	app-arch/cpio
 	>=app-misc/pax-utils-1.2.2
 	app-portage/elt-patches
+	app-portage/portage-utils
 	dev-util/gperf
 	sys-apps/sandbox
 	sys-devel/autoconf
 	sys-devel/autoconf-archive
 	sys-devel/automake
+	sys-devel/bc
+	sys-devel/bison
+	sys-devel/flex
 	sys-devel/libtool
 	virtual/pkgconfig
 	elibc_glibc? ( sys-libs/glibc[static-libs(+)] )
@@ -127,8 +133,6 @@ if [[ ${PV} == 9999* ]]; then
 fi
 
 PATCHES=(
-	"${FILESDIR}"/${P}-fix-btrfs-progs-deps.patch
-	"${FILESDIR}"/${P}-fuse-glibc-2.34.patch
 	"${FILESDIR}/${P}-plymouth-support.patch"
 )
 

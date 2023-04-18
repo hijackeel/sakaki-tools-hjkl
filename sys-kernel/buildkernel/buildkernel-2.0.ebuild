@@ -25,7 +25,7 @@ RDEPEND="${DEPEND}
 	>=virtual/linux-sources-3
 	>=app-crypt/sbsigntools-0.6-r1
 	plymouth? ( >=sys-boot/plymouth-0.9.5-r2[pango] )
-	=sys-kernel/genkernel-4.2.6-r2
+	=sys-kernel/genkernel-4.3.2
 	>=sys-boot/efibootmgr-0.5.4-r1
 	>=sys-apps/debianutils-4.9.1[installkernel(+)]"
 
@@ -39,7 +39,7 @@ src_prepare() {
 		sed -i -e 's@USE_PLYMOUTH=true@USE_PLYMOUTH=false@g' "${S}/${PN}" || \
 			die "Failed to patch script to reflect omitted plymouth USE flag."
 	fi
-	epatch_user
+	eapply_user
 }
 src_install() {
 	dosbin "${PN}"
