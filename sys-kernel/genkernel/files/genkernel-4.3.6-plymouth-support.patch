@@ -210,7 +210,7 @@
  
 --- a/doc/genkernel.8.txt
 +++ b/doc/genkernel.8.txt
-@@ -359,6 +359,13 @@ INITIALIZATION
+@@ -357,6 +357,13 @@ INITIALIZATION
      <theme>  rather than the default theme specified in your splash
      configuration. If *--no-splash* is specified, then splash is disabled.
  
